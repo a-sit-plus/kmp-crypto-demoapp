@@ -6,6 +6,7 @@ import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.ClientCrypto
+import at.asitplus.crypto.mobile.TbaKey
 import io.github.aakira.napier.Napier
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.LocalAuthentication.LAContext
@@ -22,9 +23,9 @@ val opsWithContext = IosSpecificCryptoOps(authCtx = ctx)
 @OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun generateKey(
     alg: CryptoAlgorithm,
-    attestation: Boolean,
+    attestation: ByteArray?,
     withBiometricAuth: Duration?
-): KmmResult<CryptoPublicKey.Ec> {
+): KmmResult<TbaKey> {
     withBiometricAuth?.also {
         ctx.apply {
             touchIDAuthenticationAllowableReuseDuration = (it.inWholeSeconds).toDouble()
@@ -50,18 +51,23 @@ internal actual suspend fun generateKey(
     }
 
     Napier.w { "creating signing key" }
-    val signinKey = ClientCrypto.createSigningKey(
-        ALIAS,
-        alg,
-        IosSpecificCryptoOps(
-            secAccessControlFlags = withBiometricAuth?.let { kSecAccessControlBiometryCurrentSet }
-                ?: 0uL,
-            authCtx = ctx
-        )
+    val platformSpecifics = IosSpecificCryptoOps(
+        secAccessControlFlags = withBiometricAuth?.let { kSecAccessControlBiometryCurrentSet }
+            ?: 0uL,
+        authCtx = ctx
     )
+    return if (attestation == null) {
 
-    return signinKey as KmmResult<CryptoPublicKey.Ec>
-
+        ClientCrypto.createSigningKey(
+            ALIAS,
+            alg,
+            platformSpecifics
+        ).map { it as CryptoPublicKey.Ec to listOf() }
+    } else ClientCrypto.createTbaP256Key(
+        ALIAS,
+        attestation,
+        platformSpecifics
+    )
 }
 
 internal actual suspend fun sign(

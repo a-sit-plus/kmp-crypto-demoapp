@@ -41,6 +41,11 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
+import at.asitplus.crypto.datatypes.asn1.Asn1Element
+import at.asitplus.crypto.datatypes.asn1.Asn1Sequence
+import at.asitplus.crypto.datatypes.asn1.parse
+import at.asitplus.crypto.datatypes.pki.X509Certificate
+import at.asitplus.crypto.mobile.TbaKey
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
 import io.github.aakira.napier.DebugAntilog
@@ -49,6 +54,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -58,6 +64,7 @@ const val ALIAS = "SIGeN" //TODO something's messed up if i change this on my de
 val context = newSingleThreadContext("crypto")
 
 
+@OptIn(ExperimentalStdlibApi::class)
 @Composable
 internal fun App() {
     Napier.base(DebugAntilog())
@@ -67,10 +74,13 @@ internal fun App() {
         var selectedIndex by remember { mutableStateOf(0) }
         val algos = listOf(CryptoAlgorithm.ES256, CryptoAlgorithm.ES384, CryptoAlgorithm.ES512)
         var inputData by remember { mutableStateOf("Foo") }
-        var currentKey by remember { mutableStateOf<KmmResult<CryptoPublicKey.Ec>?>(null) }
+        var currentKey by remember { mutableStateOf<KmmResult<TbaKey>?>(null) }
         var currentKeyStr by remember { mutableStateOf("<none>") }
         var signingPossible by remember { mutableStateOf(currentKey?.isSuccess == true) }
         var signatureData by remember { mutableStateOf("") }
+        var canGenerate by remember { mutableStateOf(true) }
+
+        var genText by remember { mutableStateOf("Generate New Key") }
 
         Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
 
@@ -98,7 +108,10 @@ internal fun App() {
             }
 
             var displayedKeySize by remember { mutableStateOf(" ▼ " + algos[selectedIndex]) }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row {
                     Text(
                         "Attestation",
@@ -123,13 +136,15 @@ internal fun App() {
                 }
                 Row {
                     Text(
-                        "Biometric Auth",
+                        "Biometric Auth (10s)",
                         modifier = Modifier.padding(
                             start = 16.dp,
                             top = 16.dp,
                             end = 0.dp,
                             bottom = 16.dp
                         )
+
+
                     )
                     Checkbox(checked = biometricAuth,
                         modifier = Modifier.padding(horizontal = 0.dp, vertical = 4.dp),
@@ -182,21 +197,37 @@ internal fun App() {
             }
 
             Button(
+                enabled = canGenerate,
                 onClick = {
-                    runBlocking {
+                    CoroutineScope(context).launch {
+                        canGenerate = false
+                        genText = "Generating. Please wait…"
                         currentKey = generateKey(
                             algos[selectedIndex],
-                            attestation,
-                            if (biometricAuth) 5.seconds else null
+                            if (attestation) Random.nextBytes(16) else null,
+                            if (biometricAuth) 10.seconds else null
                         )
-                        currentKeyStr = currentKey.toString()
+                        currentKeyStr = currentKey!!.map {
+                            it.first.toString() + ": " +
+                                    it.second.joinToString {
+                                        runCatching {
+                                            Asn1Element.parse(it).prettyPrint()
+                                        }.getOrDefault(
+                                            it.toHexString(
+                                                HexFormat.UpperCase
+                                            )
+                                        )
+                                    }
+                        }.toString()
                         signingPossible = currentKey?.isSuccess ?: false
                         Napier.w { "Signing possible: ${currentKey?.isSuccess}" }
+                        canGenerate = true
+                        genText = "Generate New Key"
                     }
                 },
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
-                Text("Generate New Key")
+                Text(genText)
             }
 
             OutlinedTextField(value = currentKeyStr,
@@ -247,9 +278,9 @@ internal fun App() {
 
 internal expect suspend fun generateKey(
     alg: CryptoAlgorithm,
-    attestation: Boolean,
+    attestation: ByteArray?,
     withBiometricAuth: Duration?,
 
-    ): KmmResult<CryptoPublicKey.Ec>
+    ): KmmResult<TbaKey>
 
 internal expect suspend fun sign(data: ByteArray, alg: CryptoAlgorithm): KmmResult<CryptoSignature>

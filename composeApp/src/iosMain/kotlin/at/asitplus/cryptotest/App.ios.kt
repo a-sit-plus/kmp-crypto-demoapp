@@ -12,7 +12,6 @@ import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication
 import platform.Security.kSecAccessControlBiometryCurrentSet
 import at.asitplus.crypto.mobile.evaluate
-import io.ktor.util.encodeBase64
 import kotlin.time.Duration
 
 val ctx: LAContext = LAContext()
@@ -26,7 +25,7 @@ internal actual suspend fun generateKey(
     attestation: Boolean,
     withBiometricAuth: Duration?
 ): KmmResult<CryptoPublicKey.Ec> {
-    withBiometricAuth?.let {
+    withBiometricAuth?.also {
         ctx.apply {
             touchIDAuthenticationAllowableReuseDuration = (it.inWholeSeconds).toDouble()
         }
@@ -37,7 +36,7 @@ internal actual suspend fun generateKey(
         ).fold(onSuccess = { Napier.w { "LA Auth success: $it" } }) {
             Napier.e { "Error: ${it}" }
         }
-    }
+    } ?: { ctx.touchIDAuthenticationAllowableReuseDuration = 0.0 }
 
 
     Napier.w { "Checking for key" }
@@ -45,17 +44,13 @@ internal actual suspend fun generateKey(
     val hasKey = ClientCrypto.hasKey(ALIAS, opsWithContext)
     Napier.w { "Key with alias $ALIAS exists: $hasKey" }
 
-
-    Napier.w { "creating key should fail:" }
-
-    var signinKey = ClientCrypto.createSigningKey(ALIAS, alg, opsWithContext)
-    Napier.w { "this should not have worked, if the key existed: $signinKey" }
-
-    Napier.w { "trying to clear key" }
-    println(ClientCrypto.deleteKey(ALIAS, opsWithContext))
+    if (hasKey.getOrThrow()) {
+        Napier.w { "trying to clear key" }
+        println(ClientCrypto.deleteKey(ALIAS, opsWithContext))
+    }
 
     Napier.w { "creating signing key" }
-    signinKey = ClientCrypto.createSigningKey(
+    val signinKey = ClientCrypto.createSigningKey(
         ALIAS,
         alg,
         IosSpecificCryptoOps(
@@ -64,18 +59,12 @@ internal actual suspend fun generateKey(
             authCtx = ctx
         )
     )
-    Napier.w { "this should work: ${signinKey}" }
 
     return signinKey as KmmResult<CryptoPublicKey.Ec>
 
 }
 
-internal actual suspend fun sign(data: ByteArray, alg: CryptoAlgorithm): KmmResult<CryptoSignature> {
-    Napier.w { "Going to sign some data now with $alg bit key" }
-
-    val signResult = ClientCrypto.sign(data, ALIAS, alg, opsWithContext)
-
-    println(signResult.map { it.encodeToTlv().prettyPrint() })
-    Napier.w { "and now it is signed" }
-    return signResult
-}
+internal actual suspend fun sign(
+    data: ByteArray,
+    alg: CryptoAlgorithm
+): KmmResult<CryptoSignature> = ClientCrypto.sign(data, ALIAS, alg, opsWithContext)

@@ -3,12 +3,12 @@ package at.asitplus.cryptotest
 import android.app.Application
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricPrompt
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -18,6 +18,14 @@ import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.AndroidSpecificCryptoOps
 import at.asitplus.crypto.mobile.ClientCrypto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import kotlin.time.Duration
 
 
@@ -30,16 +38,22 @@ class AndroidApp : Application() {
         super.onCreate()
         INSTANCE = this
     }
+
     internal
     var cryptoOps: AndroidSpecificCryptoOps? = null
 }
 
-class AppActivity : ComponentActivity() {
+private var fragmentActivity: FragmentActivity? = null
+var executor: Executor? = null
+val ctx  = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
+class AppActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             App()
+            fragmentActivity = LocalContext.current as FragmentActivity
+            executor = ContextCompat.getMainExecutor(fragmentActivity!!)
         }
     }
 }
@@ -49,7 +63,9 @@ internal actual suspend fun generateKey(
     attestation: Boolean,
     withBiometricAuth: Duration?
 ): KmmResult<CryptoPublicKey.Ec> {
-    AndroidApp.INSTANCE.cryptoOps = AndroidSpecificCryptoOps(withBiometricAuth != null, 0)
+    AndroidApp.INSTANCE.cryptoOps = AndroidSpecificCryptoOps(
+        withBiometricAuth != null,
+        withBiometricAuth?.let { setupBiometric() })
     return ClientCrypto.createSigningKey(
         ALIAS,
         alg,
@@ -57,39 +73,67 @@ internal actual suspend fun generateKey(
     ) as KmmResult<CryptoPublicKey.Ec>
 }
 
-@Composable
-fun biometric() {
-    val context = LocalContext.current
+fun setupBiometric(): AndroidSpecificCryptoOps.BiometricAuth {
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle("Biometric Auth")
+        .setSubtitle("Authenticate private key usage")
+        .setNegativeButtonText("Abort")
+        .setAllowedAuthenticators(BIOMETRIC_STRONG)
+        .build()
 
-    val executor = remember { ContextCompat.getMainExecutor(context) }
+    val chan =
+        Channel<AndroidSpecificCryptoOps.BiometricAuth.AuthResult>(capacity = Channel.RENDEZVOUS)
+
     val biometricPrompt = BiometricPrompt(
-        context as FragmentActivity,
-        executor,
+        fragmentActivity!!,
+        executor!!,
         object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                super.onAuthenticationError(errorCode, errString)
-                // handle authentication error here
+                Log.w("BIOMETRIC", "Fail")
+                CoroutineScope(ctx).launch {
+                    chan.send(
+                        AndroidSpecificCryptoOps.BiometricAuth.AuthResult.Failure(
+                            errorCode,
+                            errString
+                        )
+                    )
+                }
+
             }
 
             @RequiresApi(Build.VERSION_CODES.R)
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                super.onAuthenticationSucceeded(result)
-                // handle authentication success here
+               Log.w("BIOMETRIC", "curreeded")
+                CoroutineScope(executor!!.asCoroutineDispatcher()).launch {
+
+                    Log.w("BIOMETRIC", "authed")
+                    chan.send(
+                        AndroidSpecificCryptoOps.BiometricAuth.AuthResult.Success(result)
+                    )
+                    Log.w("BIOMETRIC", "authed")
+                }
             }
 
             override fun onAuthenticationFailed() {
-                super.onAuthenticationFailed()
-                // handle authentication failure here
+                Log.w("BIOMETRIC", "ERR")
+                CoroutineScope(ctx).launch {
+                    chan.send(AndroidSpecificCryptoOps.BiometricAuth.AuthResult.Error())
+                }
             }
+
         }
     )
+    return AndroidSpecificCryptoOps.BiometricAuth(promptInfo, biometricPrompt, chan)
 }
 
-internal actual suspend fun sign(data: ByteArray, alg: CryptoAlgorithm): KmmResult<CryptoSignature> {
-    println( AndroidApp.INSTANCE.cryptoOps)
-   return  ClientCrypto.sign(
+internal actual suspend fun sign(
+    data: ByteArray,
+    alg: CryptoAlgorithm
+): KmmResult<CryptoSignature> {
+    println(AndroidApp.INSTANCE.cryptoOps)
+    return ClientCrypto.sign(
         data,
         ALIAS,
-        alg,  AndroidApp.INSTANCE.cryptoOps!!
+        alg, AndroidApp.INSTANCE.cryptoOps!!
     )
 }

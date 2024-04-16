@@ -7,18 +7,26 @@ import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.ClientCrypto
 import at.asitplus.crypto.mobile.TbaKey
+import at.asitplus.crypto.mobile.evaluate
 import io.github.aakira.napier.Napier
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication
+import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
+import platform.Security.kSecAccessControlAnd
 import platform.Security.kSecAccessControlBiometryCurrentSet
-import at.asitplus.crypto.mobile.evaluate
+import platform.Security.kSecAccessControlDevicePasscode
+import platform.Security.kSecAccessControlPrivateKeyUsage
+import platform.Security.kSecAccessControlUserPresence
 import kotlin.time.Duration
 
-val ctx: LAContext = LAContext()
 
-@OptIn(ExperimentalForeignApi::class)
-val opsWithContext = IosSpecificCryptoOps(authCtx = ctx)
+lateinit var opsForUse: IosSpecificCryptoOps
+
+var authValidUntil: Instant? = null
+var biometricTimeout: Duration? = null
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun generateKey(
@@ -27,50 +35,60 @@ internal actual suspend fun generateKey(
     withBiometricAuth: Duration?
 ): KmmResult<TbaKey> {
     withBiometricAuth?.also {
-        ctx.apply {
-            touchIDAuthenticationAllowableReuseDuration = (it.inWholeSeconds).toDouble()
-        }
-        Napier.w { "Trying to authenticate:" }
-        ctx.evaluate(
-            LAPolicyDeviceOwnerAuthentication, //either passcode or face if is fine. depending on what we used, we should be prompted for what was not done later on
-            "Use Biometrics to authenticate"
-        ).fold(onSuccess = { Napier.w { "LA Auth success: $it" } }) {
-            Napier.e { "Error: ${it}" }
-        }
-    } ?: { ctx.touchIDAuthenticationAllowableReuseDuration = 0.0 }
+        authValidUntil = Clock.System.now() + it
+        biometricTimeout = it
+    } ?: run {
+        authValidUntil = null
+        biometricTimeout = null
+    }
+    val ctx= LAContext().apply {
+        touchIDAuthenticationAllowableReuseDuration =
+            biometricTimeout?.inWholeSeconds?.toDouble() ?: 0.0
+    }
+    opsForUse = IosSpecificCryptoOps(authCtx = ctx)
 
-
-    Napier.w { "Checking for key" }
-
-    val hasKey = ClientCrypto.hasKey(ALIAS, opsWithContext)
+    val hasKey = ClientCrypto.hasKey(ALIAS, opsForUse)
     Napier.w { "Key with alias $ALIAS exists: $hasKey" }
 
     if (hasKey.getOrThrow()) {
         Napier.w { "trying to clear key" }
-        println(ClientCrypto.deleteKey(ALIAS, opsWithContext))
+        println(ClientCrypto.deleteKey(ALIAS, opsForUse))
     }
 
     Napier.w { "creating signing key" }
-    val platformSpecifics = IosSpecificCryptoOps(
+    val opsForCreation = IosSpecificCryptoOps(
         secAccessControlFlags = withBiometricAuth?.let { kSecAccessControlBiometryCurrentSet }
             ?: 0uL,
         authCtx = ctx
-    )
-    return if (attestation == null) {
 
+    )
+    return (if (attestation == null) {
         ClientCrypto.createSigningKey(
             ALIAS,
             alg,
-            platformSpecifics
+            opsForCreation
         ).map { it as CryptoPublicKey.Ec to listOf() }
     } else ClientCrypto.createTbaP256Key(
         ALIAS,
         attestation,
-        platformSpecifics
-    )
+        opsForCreation
+    ))
 }
 
+@OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun sign(
     data: ByteArray,
     alg: CryptoAlgorithm
-): KmmResult<CryptoSignature> = ClientCrypto.sign(data, ALIAS, alg, opsWithContext)
+): KmmResult<CryptoSignature> {
+    authValidUntil?.let {
+        if (it < Clock.System.now()) {
+            authValidUntil = Clock.System.now() + biometricTimeout!!
+            opsForUse = IosSpecificCryptoOps(authCtx = LAContext().apply {
+                touchIDAuthenticationAllowableReuseDuration =
+                    biometricTimeout!!.inWholeSeconds.toDouble()
+            })
+        }
+    }
+    return ClientCrypto.sign(data, ALIAS, alg, opsForUse)
+}
+

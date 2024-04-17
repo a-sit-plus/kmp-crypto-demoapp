@@ -3,6 +3,7 @@ package at.asitplus.cryptotest
 import at.asitplus.KmmResult
 import at.asitplus.crypto.mobile.IosSpecificCryptoOps
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
+import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.CryptoPrivateKey
 import at.asitplus.crypto.mobile.IosPrivateKey
@@ -125,3 +126,4 @@ internal actual suspend fun sign(
     return KmpCrypto.sign(data, signingKey, alg)
 }
 
+internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)

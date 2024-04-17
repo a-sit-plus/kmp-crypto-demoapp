@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
+import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.AndroidSpecificCryptoOps
 import at.asitplus.crypto.mobile.CryptoPrivateKey
@@ -96,3 +97,5 @@ internal actual suspend fun sign(
         alg
     )
 }
+
+internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
+import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.asn1.Asn1Element
 import at.asitplus.crypto.datatypes.asn1.parse
@@ -207,7 +208,7 @@ internal fun App() {
                         )
 
                         //just to check
-                        KmpCrypto.getPublicKey(ALIAS).let { Napier.w { "PubKey retreived from native: $it" } }
+                       loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
 
                         currentKeyStr = currentKey!!.map {
                             it.first.toString() + ": " +
@@ -291,3 +292,5 @@ internal expect suspend fun sign(
     alg: CryptoAlgorithm,
     signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature>
+
+internal expect suspend fun loadPubKey():KmmResult<CryptoPublicKey>

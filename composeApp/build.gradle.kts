@@ -6,6 +6,7 @@ plugins {
 }
 
 kotlin {
+    jvm()
     jvmToolchain(17)
     androidTarget {
         compilations.all {
@@ -57,6 +58,11 @@ kotlin {
             implementation(libs.compose.uitooling)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.androidx.biometric)
+        }
+
+
+        jvmMain.dependencies {
+            implementation(compose.desktop.currentOs)
         }
 
     }

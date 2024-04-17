@@ -39,12 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
-import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.asn1.Asn1Element
-import at.asitplus.crypto.datatypes.asn1.Asn1Sequence
 import at.asitplus.crypto.datatypes.asn1.parse
-import at.asitplus.crypto.datatypes.pki.X509Certificate
+import at.asitplus.crypto.mobile.CryptoPrivateKey
 import at.asitplus.crypto.mobile.TbaKey
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
@@ -53,7 +51,6 @@ import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -255,7 +252,8 @@ internal fun App() {
                     CoroutineScope(context).launch {
                         sign(
                             inputData.encodeToByteArray(),
-                            algos[selectedIndex]
+                            algos[selectedIndex],
+                            currentKey!!.getOrThrow().first.first
                         ).map { signatureData = it.encodeToTlv().prettyPrint() }
                     }
 
@@ -283,4 +281,8 @@ internal expect suspend fun generateKey(
 
     ): KmmResult<TbaKey>
 
-internal expect suspend fun sign(data: ByteArray, alg: CryptoAlgorithm): KmmResult<CryptoSignature>
+internal expect suspend fun sign(
+    data: ByteArray,
+    alg: CryptoAlgorithm,
+    signingKey: CryptoPrivateKey
+): KmmResult<CryptoSignature>

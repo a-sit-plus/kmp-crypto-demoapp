@@ -3,30 +3,71 @@ package at.asitplus.cryptotest
 import at.asitplus.KmmResult
 import at.asitplus.crypto.mobile.IosSpecificCryptoOps
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
-import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
-import at.asitplus.crypto.mobile.ClientCrypto
+import at.asitplus.crypto.mobile.CryptoPrivateKey
+import at.asitplus.crypto.mobile.IosPrivateKey
+import at.asitplus.crypto.mobile.KmpCrypto
 import at.asitplus.crypto.mobile.TbaKey
-import at.asitplus.crypto.mobile.evaluate
 import io.github.aakira.napier.Napier
+import io.ktor.util.encodeBase64
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import platform.LocalAuthentication.LAContext
-import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthentication
-import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
-import platform.Security.kSecAccessControlAnd
 import platform.Security.kSecAccessControlBiometryCurrentSet
-import platform.Security.kSecAccessControlDevicePasscode
-import platform.Security.kSecAccessControlPrivateKeyUsage
-import platform.Security.kSecAccessControlUserPresence
+import kotlin.random.Random
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
+private val AUTH_CONTAINER = Random.nextBytes(16).encodeBase64()
 
-lateinit var opsForUse: IosSpecificCryptoOps
+//TODO: this needs to be documented!
+private var IosPrivateKey.authContainer: AuthContainer?
+    get() = additionalData[AUTH_CONTAINER] as AuthContainer?
+    set(value) {
+        if (value != null)
+            additionalData.put(AUTH_CONTAINER, value) else
+            additionalData.remove(AUTH_CONTAINER)
+    }
 
-var authValidUntil: Instant? = null
-var biometricTimeout: Duration? = null
+private fun IosPrivateKey.reAuth() {
+    platformSpecifics = authContainer?.getAuthCtx() ?: AuthContainer.noAuth
+}
+
+private class AuthContainer(
+    authValidUntil: Instant,
+    private var opsForUse: IosSpecificCryptoOps
+) {
+
+    var authValidUntil: Instant
+        private set
+
+    init {
+        this.authValidUntil = authValidUntil
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    fun getAuthCtx(): IosSpecificCryptoOps {
+        if (authValidUntil < Clock.System.now()) {
+            val touchIDAuthenticationAllowableReuseDuration =
+                opsForUse.authCtx!!.touchIDAuthenticationAllowableReuseDuration
+            authValidUntil =
+                Clock.System.now() + touchIDAuthenticationAllowableReuseDuration.seconds!!
+            opsForUse = IosSpecificCryptoOps(authCtx = LAContext().apply {
+                this.touchIDAuthenticationAllowableReuseDuration =
+                    touchIDAuthenticationAllowableReuseDuration
+            })
+
+        }
+        return opsForUse
+    }
+
+    companion object {
+        @OptIn(ExperimentalForeignApi::class)
+        val noAuth = IosSpecificCryptoOps()
+    }
+
+}
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun generateKey(
@@ -34,25 +75,23 @@ internal actual suspend fun generateKey(
     attestation: ByteArray?,
     withBiometricAuth: Duration?
 ): KmmResult<TbaKey> {
-    withBiometricAuth?.also {
-        authValidUntil = Clock.System.now() + it
-        biometricTimeout = it
-    } ?: run {
-        authValidUntil = null
-        biometricTimeout = null
-    }
-    val ctx= LAContext().apply {
+    val ctx = LAContext().apply {
         touchIDAuthenticationAllowableReuseDuration =
-            biometricTimeout?.inWholeSeconds?.toDouble() ?: 0.0
+            withBiometricAuth?.inWholeSeconds?.toDouble() ?: 0.0
     }
-    opsForUse = IosSpecificCryptoOps(authCtx = ctx)
+    val opsForUse = IosSpecificCryptoOps(authCtx = ctx)
+    val authContainer =
+        withBiometricAuth?.let {
+            AuthContainer(Clock.System.now() + it, opsForUse)
+        }
 
-    val hasKey = ClientCrypto.hasKey(ALIAS, opsForUse)
+
+    val hasKey = KmpCrypto.hasKey(ALIAS, opsForUse)
     Napier.w { "Key with alias $ALIAS exists: $hasKey" }
 
     if (hasKey.getOrThrow()) {
         Napier.w { "trying to clear key" }
-        println(ClientCrypto.deleteKey(ALIAS, opsForUse))
+        println(KmpCrypto.deleteKey(ALIAS, opsForUse))
     }
 
     Napier.w { "creating signing key" }
@@ -60,35 +99,29 @@ internal actual suspend fun generateKey(
         secAccessControlFlags = withBiometricAuth?.let { kSecAccessControlBiometryCurrentSet }
             ?: 0uL,
         authCtx = ctx
-
     )
+
     return (if (attestation == null) {
-        ClientCrypto.createSigningKey(
+        KmpCrypto.createSigningKey(
             ALIAS,
             alg,
             opsForCreation
-        ).map { it as CryptoPublicKey.Ec to listOf() }
-    } else ClientCrypto.createTbaP256Key(
+        ).map { it.apply { (first as IosPrivateKey).authContainer = authContainer } to listOf() }
+    } else KmpCrypto.createTbaP256Key(
         ALIAS,
         attestation,
         opsForCreation
-    ))
+    )).map { it.apply { (first.first as IosPrivateKey).authContainer = authContainer } }
 }
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun sign(
     data: ByteArray,
-    alg: CryptoAlgorithm
+    alg: CryptoAlgorithm,
+    signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature> {
-    authValidUntil?.let {
-        if (it < Clock.System.now()) {
-            authValidUntil = Clock.System.now() + biometricTimeout!!
-            opsForUse = IosSpecificCryptoOps(authCtx = LAContext().apply {
-                touchIDAuthenticationAllowableReuseDuration =
-                    biometricTimeout!!.inWholeSeconds.toDouble()
-            })
-        }
-    }
-    return ClientCrypto.sign(data, ALIAS, alg, opsForUse)
+    if (signingKey !is IosPrivateKey) throw IllegalArgumentException("Not an iOS Private Key!")
+    signingKey.reAuth()
+    return KmpCrypto.sign(data, signingKey, alg)
 }
 

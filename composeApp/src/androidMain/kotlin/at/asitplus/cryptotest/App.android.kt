@@ -10,10 +10,10 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
-import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.mobile.AndroidSpecificCryptoOps
-import at.asitplus.crypto.mobile.ClientCrypto
+import at.asitplus.crypto.mobile.CryptoPrivateKey
+import at.asitplus.crypto.mobile.KmpCrypto
 import at.asitplus.crypto.mobile.TbaKey
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.Executor
@@ -30,9 +30,6 @@ class AndroidApp : Application() {
         super.onCreate()
         INSTANCE = this
     }
-
-    internal
-    var cryptoOps: AndroidSpecificCryptoOps? = null
 }
 
 private var fragmentActivity: FragmentActivity? = null
@@ -55,19 +52,20 @@ internal actual suspend fun generateKey(
     attestation: ByteArray?,
     withBiometricAuth: Duration?
 ): KmmResult<TbaKey> {
-    AndroidApp.INSTANCE.cryptoOps = AndroidSpecificCryptoOps(
+
+    val opsForUse = AndroidSpecificCryptoOps(
         withBiometricAuth,
         withBiometricAuth?.let { setupBiometric() })
-    return if (attestation == null) ClientCrypto.createSigningKey(
+    return if (attestation == null) KmpCrypto.createSigningKey(
         ALIAS,
         alg,
-        AndroidApp.INSTANCE.cryptoOps!!,
-    ).map { it as CryptoPublicKey.Ec to listOf() }
+        opsForUse,
+    ).map { it to listOf() }
     else {
-        ClientCrypto.createTbaP256Key(
+        KmpCrypto.createTbaP256Key(
             ALIAS,
             attestation,
-            AndroidApp.INSTANCE.cryptoOps!!
+            opsForUse
         )
     }
 }
@@ -89,12 +87,12 @@ fun setupBiometric(): AndroidSpecificCryptoOps.BiometricAuth {
 
 internal actual suspend fun sign(
     data: ByteArray,
-    alg: CryptoAlgorithm
+    alg: CryptoAlgorithm,
+    signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature> {
-    println(AndroidApp.INSTANCE.cryptoOps)
-    return ClientCrypto.sign(
+    return KmpCrypto.sign(
         data,
-        ALIAS,
-        alg, AndroidApp.INSTANCE.cryptoOps!!
+        signingKey,
+        alg
     )
 }

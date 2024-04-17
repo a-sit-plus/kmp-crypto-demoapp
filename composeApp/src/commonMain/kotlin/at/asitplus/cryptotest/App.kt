@@ -43,6 +43,7 @@ import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.asn1.Asn1Element
 import at.asitplus.crypto.datatypes.asn1.parse
 import at.asitplus.crypto.mobile.CryptoPrivateKey
+import at.asitplus.crypto.mobile.KmpCrypto
 import at.asitplus.crypto.mobile.TbaKey
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
@@ -56,15 +57,15 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 
-const val ALIAS = "SIGeN" //TODO something's messed up if i change this on my device
+const val ALIAS = "Bartschlüssel"
 
-val context = newSingleThreadContext("crypto")
+val context = newSingleThreadContext("crypto").also { Napier.base(DebugAntilog()) }
 
 
 @OptIn(ExperimentalStdlibApi::class)
 @Composable
 internal fun App() {
-    Napier.base(DebugAntilog())
+
     AppTheme {
         var attestation by remember { mutableStateOf(false) }
         var biometricAuth by remember { mutableStateOf(false) }
@@ -204,6 +205,10 @@ internal fun App() {
                             if (attestation) Random.nextBytes(16) else null,
                             if (biometricAuth) 10.seconds else null
                         )
+
+                        //just to check
+                        KmpCrypto.getPublicKey(ALIAS).let { Napier.w { "PubKey retreived from native: $it" } }
+
                         currentKeyStr = currentKey!!.map {
                             it.first.toString() + ": " +
                                     it.second.joinToString {

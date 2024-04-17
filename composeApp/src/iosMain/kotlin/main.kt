@@ -4,5 +4,6 @@ import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import platform.UIKit.UIViewController
 
-fun MainViewController(): UIViewController = ComposeUIViewController {    Napier.base(DebugAntilog())
-    App() }
+fun MainViewController(): UIViewController = ComposeUIViewController {
+    App()
+}

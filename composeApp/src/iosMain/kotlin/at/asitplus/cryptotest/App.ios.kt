@@ -67,7 +67,6 @@ private class AuthContainer(
         @OptIn(ExperimentalForeignApi::class)
         val noAuth = IosSpecificCryptoOps()
     }
-
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -127,3 +126,7 @@ internal actual suspend fun sign(
 }
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
+
+@OptIn(ExperimentalForeignApi::class)
+internal actual suspend fun loadPrivateKey(): KmmResult<CryptoPrivateKey> =
+    KmpCrypto.getPrivateKey(ALIAS, IosSpecificCryptoOps())

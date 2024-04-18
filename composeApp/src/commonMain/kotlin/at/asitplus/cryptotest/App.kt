@@ -194,45 +194,68 @@ internal fun App() {
                     }
                 }
             }
-
-            Button(
-                enabled = canGenerate,
-                onClick = {
-                    CoroutineScope(context).launch {
-                        canGenerate = false
-                        genText = "Generating. Please wait…"
-                        currentKey = generateKey(
-                            algos[selectedIndex],
-                            if (attestation) Random.nextBytes(16) else null,
-                            if (biometricAuth) 10.seconds else null
-                        )
-
-                        //just to check
-                       loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
-
-                        currentKeyStr = currentKey!!.map {
-                            it.first.toString() + ": " +
-                                    it.second.joinToString {
-                                        runCatching {
-                                            Asn1Element.parse(it).prettyPrint()
-                                        }.getOrDefault(
-                                            it.toHexString(
-                                                HexFormat.UpperCase
-                                            )
-                                        )
-                                    }
-                        }.toString()
-                        signingPossible = currentKey?.isSuccess ?: false
-                        Napier.w { "Signing possible: ${currentKey?.isSuccess}" }
-                        canGenerate = true
-                        genText = "Generate New Key"
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(genText)
-            }
+                Button(
+                    enabled = canGenerate,
+                    onClick = {
+                        CoroutineScope(context).launch {
+                            canGenerate = false
+                            genText = "Generating. Please wait…"
+                            currentKey = generateKey(
+                                algos[selectedIndex],
+                                if (attestation) Random.nextBytes(16) else null,
+                                if (biometricAuth) 10.seconds else null
+                            )
 
+                            //just to check
+                            loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
+
+                            currentKeyStr = currentKey!!.map {
+                                it.first.toString() + ": " +
+                                        it.second.joinToString {
+                                            runCatching {
+                                                Asn1Element.parse(it).prettyPrint()
+                                            }.getOrDefault(
+                                                it.toHexString(
+                                                    HexFormat.UpperCase
+                                                )
+                                            )
+                                        }
+                            }.toString()
+                            signingPossible = currentKey?.isSuccess ?: false
+                            Napier.w { "Signing possible: ${currentKey?.isSuccess}" }
+                            canGenerate = true
+                            genText = "Generate New Key"
+                        }
+                    },
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(genText)
+                }
+
+                Button(
+                    enabled = canGenerate,
+                    onClick = {
+                        CoroutineScope(context).launch {
+                            canGenerate = false
+                            genText = "Loading Key. Please wait…"
+                           loadPrivateKey().let { Napier.w { "Priv retrieved from native: $it" } }
+
+                            //just to check
+                            loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
+                            canGenerate = true
+                            genText = "Generate New Key"
+                        }
+                    },
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text("Load Private Key")
+                }
+
+            }
             OutlinedTextField(value = currentKeyStr,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 minLines = 1,
@@ -294,3 +317,5 @@ internal expect suspend fun sign(
 ): KmmResult<CryptoSignature>
 
 internal expect suspend fun loadPubKey():KmmResult<CryptoPublicKey>
+
+internal expect suspend fun loadPrivateKey():KmmResult<CryptoPrivateKey>

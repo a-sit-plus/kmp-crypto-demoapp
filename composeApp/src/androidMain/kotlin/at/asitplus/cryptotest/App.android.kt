@@ -99,3 +99,5 @@ internal actual suspend fun sign(
 }
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
+internal actual suspend fun loadPrivateKey() =
+    KmpCrypto.getPrivateKey(ALIAS, AndroidSpecificCryptoOps(null, null))

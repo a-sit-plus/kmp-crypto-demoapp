@@ -14,19 +14,24 @@ import kotlin.time.Duration
 
 val PROVIDER = BouncyCastleProvider()
 val JVM_OPTS =
-    JvmSpecifics(PROVIDER, KeyStore.getInstance("PKCS12", PROVIDER).apply { load(null, null) }, privateKeyPassword = null)
+    JvmSpecifics(
+        PROVIDER,
+        KeyStore.getInstance("PKCS12", PROVIDER).apply { load(null, null) },
+        privateKeyPassword = null
+    )
 
 internal actual suspend fun generateKey(
     alg: CryptoAlgorithm,
     attestation: ByteArray?,
     withBiometricAuth: Duration?,
 
-    ): KmmResult<TbaKey> = KmpCrypto.createSigningKey(ALIAS,alg, JVM_OPTS).map { it to listOf() }
+    ): KmmResult<TbaKey> = KmpCrypto.createSigningKey(ALIAS, alg, JVM_OPTS).map { it to listOf() }
 
 internal actual suspend fun sign(
     data: ByteArray,
     alg: CryptoAlgorithm,
     signingKey: CryptoPrivateKey
-): KmmResult<CryptoSignature> = KmpCrypto.sign(data,signingKey,alg)
+): KmmResult<CryptoSignature> = KmpCrypto.sign(data, signingKey, alg)
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS, JVM_OPTS)
+internal actual suspend fun loadPrivateKey() = KmpCrypto.getPrivateKey(ALIAS, JVM_OPTS)

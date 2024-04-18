@@ -1,14 +1,15 @@
 package at.asitplus.cryptotest
 
 import at.asitplus.KmmResult
-import at.asitplus.crypto.mobile.IosSpecificCryptoOps
+import at.asitplus.crypto.provider.IosSpecificCryptoOps
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
-import at.asitplus.crypto.mobile.CryptoPrivateKey
-import at.asitplus.crypto.mobile.IosPrivateKey
-import at.asitplus.crypto.mobile.KmpCrypto
-import at.asitplus.crypto.mobile.TbaKey
+import at.asitplus.crypto.provider.CryptoPrivateKey
+import at.asitplus.crypto.provider.IosPrivateKey
+import at.asitplus.crypto.provider.KeyPair
+import at.asitplus.crypto.provider.KmpCrypto
+import at.asitplus.crypto.provider.TbaKey
 import io.github.aakira.napier.Napier
 import io.ktor.util.encodeBase64
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -128,5 +129,5 @@ internal actual suspend fun sign(
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual suspend fun loadPrivateKey(): KmmResult<CryptoPrivateKey> =
-    KmpCrypto.getPrivateKey(ALIAS, IosSpecificCryptoOps())
+internal actual suspend fun loadPrivateKey(): KmmResult<KeyPair> =
+    KmpCrypto.getKeyPair(ALIAS, IosSpecificCryptoOps())

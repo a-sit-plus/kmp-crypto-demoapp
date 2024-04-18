@@ -4,10 +4,10 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
-import at.asitplus.crypto.mobile.CryptoPrivateKey
-import at.asitplus.crypto.mobile.JvmSpecifics
-import at.asitplus.crypto.mobile.KmpCrypto
-import at.asitplus.crypto.mobile.TbaKey
+import at.asitplus.crypto.provider.CryptoPrivateKey
+import at.asitplus.crypto.provider.JvmSpecifics
+import at.asitplus.crypto.provider.KmpCrypto
+import at.asitplus.crypto.provider.TbaKey
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyStore
 import kotlin.time.Duration
@@ -34,4 +34,4 @@ internal actual suspend fun sign(
 ): KmmResult<CryptoSignature> = KmpCrypto.sign(data, signingKey, alg)
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS, JVM_OPTS)
-internal actual suspend fun loadPrivateKey() = KmpCrypto.getPrivateKey(ALIAS, JVM_OPTS)
+internal actual suspend fun loadPrivateKey() = KmpCrypto.getKeyPair(ALIAS, JVM_OPTS)

@@ -13,10 +13,11 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
-import at.asitplus.crypto.mobile.AndroidSpecificCryptoOps
-import at.asitplus.crypto.mobile.CryptoPrivateKey
-import at.asitplus.crypto.mobile.KmpCrypto
-import at.asitplus.crypto.mobile.TbaKey
+import at.asitplus.crypto.provider.AndroidSpecificCryptoOps
+import at.asitplus.crypto.provider.BiometricPromptAdapter
+import at.asitplus.crypto.provider.CryptoPrivateKey
+import at.asitplus.crypto.provider.KmpCrypto
+import at.asitplus.crypto.provider.TbaKey
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
@@ -86,7 +87,7 @@ fun setupBiometric(): AndroidSpecificCryptoOps.BiometricAuth {
         .setAllowedAuthenticators(BIOMETRIC_STRONG)
         .build()
 
-    val biometricPrompt = at.asitplus.crypto.mobile.BiometricPromptAdapter(
+    val biometricPrompt = BiometricPromptAdapter(
         fragmentActivity!!,
         executor!!
     )
@@ -107,4 +108,4 @@ internal actual suspend fun sign(
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 internal actual suspend fun loadPrivateKey() =
-    KmpCrypto.getPrivateKey(ALIAS, AndroidSpecificCryptoOps())
+    KmpCrypto.getKeyPair(ALIAS, AndroidSpecificCryptoOps())

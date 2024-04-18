@@ -45,9 +45,9 @@ import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.asn1.Asn1Element
 import at.asitplus.crypto.datatypes.asn1.parse
-import at.asitplus.crypto.mobile.CryptoPrivateKey
-import at.asitplus.crypto.mobile.KmpCrypto
-import at.asitplus.crypto.mobile.TbaKey
+import at.asitplus.crypto.provider.CryptoPrivateKey
+import at.asitplus.crypto.provider.KeyPair
+import at.asitplus.crypto.provider.TbaKey
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
 import io.github.aakira.napier.DebugAntilog
@@ -350,4 +350,4 @@ internal expect suspend fun sign(
 
 internal expect suspend fun loadPubKey(): KmmResult<CryptoPublicKey>
 
-internal expect suspend fun loadPrivateKey(): KmmResult<CryptoPrivateKey>
+internal expect suspend fun loadPrivateKey(): KmmResult<KeyPair>

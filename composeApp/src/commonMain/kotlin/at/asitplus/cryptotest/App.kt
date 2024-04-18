@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,7 +71,7 @@ internal fun App() {
 
     AppTheme {
         var attestation by remember { mutableStateOf(false) }
-        var biometricAuth by remember { mutableStateOf(false) }
+        var biometricAuth by remember { mutableStateOf(" Disabled") }
         var selectedIndex by remember { mutableStateOf(0) }
         val algos = listOf(CryptoAlgorithm.ES256, CryptoAlgorithm.ES384, CryptoAlgorithm.ES512)
         var inputData by remember { mutableStateOf("Foo") }
@@ -135,21 +137,49 @@ internal fun App() {
                 }
                 Row {
                     Text(
-                        "Biometric Auth (10s)",
+                        "Biometric Auth",
                         modifier = Modifier.padding(
                             start = 16.dp,
                             top = 16.dp,
-                            end = 0.dp,
+                            end = 4.dp,
                             bottom = 16.dp
                         )
 
 
                     )
-                    Checkbox(checked = biometricAuth,
-                        modifier = Modifier.padding(horizontal = 0.dp, vertical = 4.dp),
-                        onCheckedChange = {
-                            biometricAuth = it
-                        })
+
+                    var expanded by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier.wrapContentSize(Alignment.TopStart)
+                            .padding(top=16.dp,end=16.dp).background(MaterialTheme.colorScheme.primary)
+                    ) {
+
+                        Text(
+                            biometricAuth,
+                            modifier = Modifier.align(Alignment.BottomStart).width(78.dp)
+                                .clickable(onClick = {
+                                    expanded = true
+
+                                }),
+                            color = MaterialTheme.colorScheme.onPrimary
+
+                        )
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = {
+                                expanded = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf(" Disabled", " 0s", " 10s", " 20s", " 60s").forEachIndexed { _, s ->
+                                DropdownMenuItem(text = { Text(text = s) },
+                                    onClick = {
+                                        expanded = false
+                                        biometricAuth = s
+                                    })
+                            }
+                        }
+                    }
                 }
             }
 
@@ -207,7 +237,9 @@ internal fun App() {
                             currentKey = generateKey(
                                 algos[selectedIndex],
                                 if (attestation) Random.nextBytes(16) else null,
-                                if (biometricAuth) 10.seconds else null
+                                runCatching {
+                                    biometricAuth.substringBefore("s").trim().toInt()
+                                }.getOrNull()?.seconds
                             )
 
                             //just to check
@@ -242,7 +274,7 @@ internal fun App() {
                         CoroutineScope(context).launch {
                             canGenerate = false
                             genText = "Loading Key. Please wait…"
-                           loadPrivateKey().let { Napier.w { "Priv retrieved from native: $it" } }
+                            loadPrivateKey().let { Napier.w { "Priv retrieved from native: $it" } }
 
                             //just to check
                             loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
@@ -316,6 +348,6 @@ internal expect suspend fun sign(
     signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature>
 
-internal expect suspend fun loadPubKey():KmmResult<CryptoPublicKey>
+internal expect suspend fun loadPubKey(): KmmResult<CryptoPublicKey>
 
-internal expect suspend fun loadPrivateKey():KmmResult<CryptoPrivateKey>
+internal expect suspend fun loadPrivateKey(): KmmResult<CryptoPrivateKey>

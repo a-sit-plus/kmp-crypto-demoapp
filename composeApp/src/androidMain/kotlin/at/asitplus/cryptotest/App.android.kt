@@ -2,6 +2,7 @@ package at.asitplus.cryptotest
 
 import android.app.Application
 import android.os.Bundle
+import android.security.keystore.KeyProperties
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricPrompt
@@ -53,10 +54,16 @@ internal actual suspend fun generateKey(
     attestation: ByteArray?,
     withBiometricAuth: Duration?
 ): KmmResult<TbaKey> {
-
     val opsForUse = AndroidSpecificCryptoOps(
-        withBiometricAuth,
-        withBiometricAuth?.let { setupBiometric() })
+        keyGenCustomization = {
+            withBiometricAuth?.also {
+                setUserAuthenticationRequired(true)
+                setUserAuthenticationParameters(
+                    it.inWholeSeconds.toInt(),
+                    KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
+            } ?: setUserAuthenticationRequired(false)
+        }) { setupBiometric() }
     return if (attestation == null) KmpCrypto.createSigningKey(
         ALIAS,
         alg,
@@ -100,4 +107,4 @@ internal actual suspend fun sign(
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 internal actual suspend fun loadPrivateKey() =
-    KmpCrypto.getPrivateKey(ALIAS, AndroidSpecificCryptoOps(null, null))
+    KmpCrypto.getPrivateKey(ALIAS, AndroidSpecificCryptoOps())

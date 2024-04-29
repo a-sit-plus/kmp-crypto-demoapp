@@ -7,7 +7,7 @@ import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.IosPrivateKey
-import at.asitplus.crypto.provider.KeyPair
+import at.asitplus.crypto.provider.CryptoKeyPair
 import at.asitplus.crypto.provider.KmpCrypto
 import at.asitplus.crypto.provider.TbaKey
 import io.github.aakira.napier.Napier
@@ -129,5 +129,5 @@ internal actual suspend fun sign(
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 
 @OptIn(ExperimentalForeignApi::class)
-internal actual suspend fun loadPrivateKey(): KmmResult<KeyPair> =
+internal actual suspend fun loadPrivateKey(): KmmResult<CryptoKeyPair> =
     KmpCrypto.getKeyPair(ALIAS, IosSpecificCryptoOps())

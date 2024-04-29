@@ -46,7 +46,7 @@ import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.asn1.Asn1Element
 import at.asitplus.crypto.datatypes.asn1.parse
 import at.asitplus.crypto.provider.CryptoPrivateKey
-import at.asitplus.crypto.provider.KeyPair
+import at.asitplus.crypto.provider.CryptoKeyPair
 import at.asitplus.crypto.provider.TbaKey
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
@@ -350,4 +350,4 @@ internal expect suspend fun sign(
 
 internal expect suspend fun loadPubKey(): KmmResult<CryptoPublicKey>
 
-internal expect suspend fun loadPrivateKey(): KmmResult<KeyPair>
+internal expect suspend fun loadPrivateKey(): KmmResult<CryptoKeyPair>

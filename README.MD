@@ -1,4 +1,4 @@
-# Compose Multiplatform Application
+# KMP Crypto Demo Multiplatform (iOS, Android JVM) App
 
 ## Before running!
  - check your system with [KDoctor](https://github.com/Kotlin/kdoctor)

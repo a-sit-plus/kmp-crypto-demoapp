@@ -1,5 +1,8 @@
 # KMP Crypto Demo Multiplatform (iOS, Android JVM) App
 
+
+![img.png](img.png)
+
 This app showcases the KMP Crypto provider (currently supporting onl EC crypto) on the desktop, on Android and on iOS.
 It is possible to generate key pairs and sign data. Verification is not implemented in the demo app.
 

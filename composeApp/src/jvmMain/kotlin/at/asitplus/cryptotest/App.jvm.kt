@@ -42,5 +42,5 @@ internal actual suspend fun storeCertChain(): KmmResult<Unit> =
 
 internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
     KmpCrypto.getCertificateChain(
-        ALIAS+"CRT_CHAIN", JVM_OPTS
+        ALIAS + "CRT_CHAIN", JVM_OPTS
     )

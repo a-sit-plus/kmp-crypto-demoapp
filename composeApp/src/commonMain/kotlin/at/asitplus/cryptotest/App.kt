@@ -55,6 +55,7 @@ import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import io.ktor.util.decodeBase64Bytes
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlin.random.Random
@@ -117,7 +118,7 @@ const val ALIAS = "Bartschlüssel"
 val context = newSingleThreadContext("crypto").also { Napier.base(DebugAntilog()) }
 
 
-@OptIn(ExperimentalStdlibApi::class)
+@OptIn(ExperimentalStdlibApi::class, ExperimentalCoroutinesApi::class)
 @Composable
 internal fun App() {
 
@@ -131,9 +132,10 @@ internal fun App() {
         var currentKeyStr by remember { mutableStateOf("<none>") }
         var signingPossible by remember { mutableStateOf(currentKey?.isSuccess == true) }
         var signatureData by remember { mutableStateOf("") }
+        var certData by remember { mutableStateOf("") }
         var canGenerate by remember { mutableStateOf(true) }
 
-        var genText by remember { mutableStateOf("Generate New Key") }
+        var genText by remember { mutableStateOf("Generate Key") }
 
         Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
 
@@ -143,7 +145,12 @@ internal fun App() {
                 Text(
                     text = "KMP Crypto Demo",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(
+                        top = 16.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 0.dp
+                    )
                 )
 
                 Spacer(modifier = Modifier.weight(1.0f))
@@ -162,21 +169,16 @@ internal fun App() {
 
             var displayedKeySize by remember { mutableStateOf(" ▼ " + algos[selectedIndex]) }
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row {
                     Text(
                         "Attestation",
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            top = 16.dp,
-                            end = 0.dp,
-                            bottom = 16.dp
-                        )
+                        modifier = Modifier.padding(top = 11.dp)
                     )
                     Checkbox(checked = attestation,
-                        modifier = Modifier.padding(horizontal = 0.dp, vertical = 4.dp),
+                        modifier = Modifier.wrapContentSize(Alignment.TopStart).padding(0.dp),
                         onCheckedChange = {
                             attestation = it
                             if (attestation) {
@@ -191,10 +193,10 @@ internal fun App() {
                     Text(
                         "Biometric Auth",
                         modifier = Modifier.padding(
-                            start = 16.dp,
-                            top = 16.dp,
+                            start = 0.dp,
+                            top = 12.dp,
                             end = 4.dp,
-                            bottom = 16.dp
+                            bottom = 0.dp
                         )
 
 
@@ -202,8 +204,7 @@ internal fun App() {
 
                     var expanded by remember { mutableStateOf(false) }
                     Box(
-                        modifier = Modifier.wrapContentSize(Alignment.TopStart)
-                            .padding(top = 16.dp, end = 16.dp)
+                        modifier = Modifier.wrapContentSize(Alignment.TopStart).padding(top = 12.dp)
                             .background(MaterialTheme.colorScheme.primary)
                     ) {
 
@@ -245,16 +246,16 @@ internal fun App() {
             Row(
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Key Type", modifier = Modifier.padding(16.dp))
+                Text("Key Type", modifier = Modifier.padding(horizontal = 16.dp))
                 var expanded by remember { mutableStateOf(false) }
                 Box(
                     modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.TopStart)
-                        .padding(16.dp).background(MaterialTheme.colorScheme.primary)
+                        .padding(horizontal = 16.dp).background(MaterialTheme.colorScheme.primary)
                 ) {
 
                     Text(
                         displayedKeySize,
-                        modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart)
+                        modifier = Modifier.fillMaxWidth().align(Alignment.TopStart)
                             .clickable(onClick = {
                                 if (!attestation) {
                                     expanded = true
@@ -319,10 +320,10 @@ internal fun App() {
                             signingPossible = currentKey?.isSuccess ?: false
                             Napier.w { "Signing possible: ${currentKey?.isSuccess}" }
                             canGenerate = true
-                            genText = "Generate New Key"
+                            genText = "Generate Key"
                         }
                     },
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(start = 16.dp)
                 ) {
                     Text(genText)
                 }
@@ -333,7 +334,14 @@ internal fun App() {
                         CoroutineScope(context).launch {
                             canGenerate = false
                             genText = "Loading Key. Please wait…"
-                            loadPrivateKey().let { Napier.w { "Priv retrieved from native: $it" } }
+                            loadPrivateKey().let {
+                                Napier.w { "Priv retrieved from native: $it" }
+                                currentKey = it.map {
+                                    TbaKey(it, listOf())
+                                }
+                                currentKeyStr = currentKey.toString()
+
+                            }
 
                             //just to check
                             loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
@@ -341,14 +349,14 @@ internal fun App() {
                             genText = "Generate New Key"
                         }
                     },
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(end = 16.dp)
                 ) {
                     Text("Load Private Key")
                 }
 
             }
             OutlinedTextField(value = currentKeyStr,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 minLines = 1,
                 maxLines = 5,
                 textStyle = TextStyle.Default.copy(fontSize = 10.sp),
@@ -356,7 +364,7 @@ internal fun App() {
 
 
             OutlinedTextField(value = inputData,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 enabled = true,
                 minLines = 1,
                 maxLines = 2,
@@ -364,7 +372,10 @@ internal fun App() {
                 onValueChange = { inputData = it },
                 label = { Text("Data to be signed") })
 
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Button(
                     onClick = {
 
@@ -395,21 +406,27 @@ internal fun App() {
 
                             val loaded = getCertChain().also {
                                 Napier.w { "LOADED: $it" }
+                                certData = it.toString()
                             }
                             Napier.w { "chains are equal: " + (loaded.getOrNull() == SAMPLE_CERT_CHAIN) }
                         }
                     },
                 ) {
-                    Text("Cert")
+                    Text("Store and Load Cert")
                 }
             }
 
             OutlinedTextField(value = signatureData,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 minLines = 1,
-                maxLines = 9,
                 textStyle = TextStyle.Default.copy(fontSize = 10.sp),
                 readOnly = true, onValueChange = {}, label = { Text("Detached Signature") })
+
+            OutlinedTextField(value = certData,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                minLines = 1,
+                textStyle = TextStyle.Default.copy(fontSize = 10.sp),
+                readOnly = true, onValueChange = {}, label = { Text("Certificate Chain from KeyStore") })
         }
     }
 }

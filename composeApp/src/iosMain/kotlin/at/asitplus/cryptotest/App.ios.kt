@@ -93,7 +93,7 @@ internal actual suspend fun generateKey(
 
     if (hasKey.getOrThrow()) {
         Napier.w { "trying to clear key" }
-        println(KmpCrypto.deleteKey(ALIAS, opsForUse))
+        println(KmpCrypto.deleteEntry(ALIAS, opsForUse))
     }
 
     Napier.w { "creating signing key" }
@@ -133,6 +133,12 @@ internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 internal actual suspend fun loadPrivateKey(): KmmResult<CryptoKeyPair> =
     KmpCrypto.getKeyPair(ALIAS, IosSpecificCryptoOps())
 
-internal actual suspend fun storeCertChain():KmmResult<Unit> = TODO()
+internal actual suspend fun storeCertChain(): KmmResult<Unit> = KmpCrypto.storeCertificateChain(
+    ALIAS +"CRT_CHAIN",
+    SAMPLE_CERT_CHAIN
+)
 
-internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> = TODO()
+internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
+    KmpCrypto.getCertificateChain(
+        ALIAS+"CRT_CHAIN"
+    )

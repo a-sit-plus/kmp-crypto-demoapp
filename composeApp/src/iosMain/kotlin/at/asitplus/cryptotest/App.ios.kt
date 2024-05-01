@@ -5,6 +5,7 @@ import at.asitplus.crypto.provider.IosSpecificCryptoOps
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
+import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.IosPrivateKey
 import at.asitplus.crypto.provider.CryptoKeyPair
@@ -131,3 +132,7 @@ internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 @OptIn(ExperimentalForeignApi::class)
 internal actual suspend fun loadPrivateKey(): KmmResult<CryptoKeyPair> =
     KmpCrypto.getKeyPair(ALIAS, IosSpecificCryptoOps())
+
+internal actual suspend fun storeCertChain():KmmResult<Unit> = TODO()
+
+internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> = TODO()

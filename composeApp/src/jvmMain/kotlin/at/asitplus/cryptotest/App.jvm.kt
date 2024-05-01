@@ -4,6 +4,7 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
+import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.JvmSpecifics
 import at.asitplus.crypto.provider.KmpCrypto
@@ -35,3 +36,11 @@ internal actual suspend fun sign(
 
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS, JVM_OPTS)
 internal actual suspend fun loadPrivateKey() = KmpCrypto.getKeyPair(ALIAS, JVM_OPTS)
+
+internal actual suspend fun storeCertChain(): KmmResult<Unit> =
+    KmpCrypto.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN, JVM_OPTS)
+
+internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
+    KmpCrypto.getCertificateChain(
+        ALIAS+"CRT_CHAIN", JVM_OPTS
+    )

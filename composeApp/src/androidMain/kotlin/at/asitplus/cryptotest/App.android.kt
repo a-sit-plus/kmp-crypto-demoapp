@@ -13,6 +13,7 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
+import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.AndroidPrivateKey
 import at.asitplus.crypto.provider.AndroidSpecificCryptoOps
 import at.asitplus.crypto.provider.BiometricPromptAdapter
@@ -115,3 +116,9 @@ internal actual suspend fun sign(
 internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
 internal actual suspend fun loadPrivateKey() =
     KmpCrypto.getKeyPair(ALIAS, AndroidSpecificCryptoOps())
+
+internal actual suspend fun storeCertChain(): KmmResult<Unit> =
+    KmpCrypto.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN)
+
+internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
+    KmpCrypto.getCertificateChain(ALIAS + "CRT_CHAIN")

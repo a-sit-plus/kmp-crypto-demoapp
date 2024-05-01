@@ -13,6 +13,7 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
+import at.asitplus.crypto.provider.AndroidPrivateKey
 import at.asitplus.crypto.provider.AndroidSpecificCryptoOps
 import at.asitplus.crypto.provider.BiometricPromptAdapter
 import at.asitplus.crypto.provider.CryptoPrivateKey
@@ -39,6 +40,8 @@ private var fragmentActivity: FragmentActivity? = null
 var executor: Executor? = null
 val ctx = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
+private var biometricPromot: AndroidSpecificCryptoOps.BiometricAuth? = null
+
 class AppActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +67,7 @@ internal actual suspend fun generateKey(
                     KeyProperties.AUTH_BIOMETRIC_STRONG
                 )
             } ?: setUserAuthenticationRequired(false)
-        }) { setupBiometric() }
+        })
     return if (attestation == null) KmpCrypto.createSigningKey(
         ALIAS,
         alg,
@@ -99,6 +102,9 @@ internal actual suspend fun sign(
     alg: CryptoAlgorithm,
     signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature> {
+    if (biometricPromot == null)
+        biometricPromot = setupBiometric()
+    (signingKey.platformSpecifics as AndroidSpecificCryptoOps).attachAuthenticationHandler { biometricPromot!! }
     return KmpCrypto.sign(
         data,
         signingKey,

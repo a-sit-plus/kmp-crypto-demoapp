@@ -11,7 +11,6 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
-import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.AndroidPrivateKey
@@ -20,7 +19,11 @@ import at.asitplus.crypto.provider.BiometricPromptAdapter
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.KmpCrypto
 import at.asitplus.crypto.provider.TbaKey
+import io.github.aakira.napier.Napier
 import kotlinx.coroutines.asCoroutineDispatcher
+import java.security.KeyStore
+import java.security.KeyStore.PrivateKeyEntry
+import java.security.cert.CertificateFactory
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.time.Duration

@@ -28,7 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +48,7 @@ import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.CryptoKeyPair
 import at.asitplus.crypto.provider.TbaKey
+import at.asitplus.crypto.provider.public
 import at.asitplus.cryptotest.theme.AppTheme
 import at.asitplus.cryptotest.theme.LocalThemeIsDark
 import io.github.aakira.napier.DebugAntilog
@@ -300,7 +300,7 @@ internal fun App() {
                                 runCatching {
                                     biometricAuth.substringBefore("s").trim().toInt()
                                 }.getOrNull()?.seconds
-                            )
+                            ).also { it.exceptionOrNull()?.printStackTrace() }
 
                             //just to check
                             loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
@@ -338,6 +338,7 @@ internal fun App() {
                                 Napier.w { "Priv retrieved from native: $it" }
                                 currentKey = it.map {
                                     TbaKey(it, listOf())
+
                                 }
                                 currentKeyStr = currentKey.toString()
 
@@ -347,6 +348,7 @@ internal fun App() {
                             loadPubKey().let { Napier.w { "PubKey retrieved from native: $it" } }
                             canGenerate = true
                             genText = "Generate New Key"
+                            signingPossible = currentKey?.isSuccess ?: false
                         }
                     },
                     modifier = Modifier.padding(end = 16.dp)
@@ -384,7 +386,13 @@ internal fun App() {
                         CoroutineScope(context).launch {
                             sign(
                                 inputData.encodeToByteArray(),
-                                algos[selectedIndex],
+                                when ((currentKey!!.getOrThrow().first.public as CryptoPublicKey.Ec).curve.keyLengthBits) {
+                                    256u -> CryptoAlgorithm.ES256
+
+                                    384u -> CryptoAlgorithm.ES384
+
+                                    else -> CryptoAlgorithm.ES512
+                                },
                                 currentKey!!.getOrThrow().first.first
                             ).map { signatureData = it.encodeToTlv().prettyPrint() }
                         }
@@ -426,7 +434,9 @@ internal fun App() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 minLines = 1,
                 textStyle = TextStyle.Default.copy(fontSize = 10.sp),
-                readOnly = true, onValueChange = {}, label = { Text("Certificate Chain from KeyStore") })
+                readOnly = true,
+                onValueChange = {},
+                label = { Text("Certificate Chain from KeyStore") })
         }
     }
 }

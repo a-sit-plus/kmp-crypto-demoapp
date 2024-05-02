@@ -3,7 +3,6 @@ package at.asitplus.cryptotest
 import at.asitplus.KmmResult
 import at.asitplus.crypto.provider.IosSpecificCryptoOps
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
-import at.asitplus.crypto.datatypes.CryptoPublicKey
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.CryptoPrivateKey

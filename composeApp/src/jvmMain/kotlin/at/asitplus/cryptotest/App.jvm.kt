@@ -7,7 +7,7 @@ import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.pki.X509Certificate
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.JvmSpecifics
-import at.asitplus.crypto.provider.KmpCrypto
+import at.asitplus.crypto.provider.CryptoProvider
 import at.asitplus.crypto.provider.TbaKey
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyStore
@@ -26,21 +26,21 @@ internal actual suspend fun generateKey(
     attestation: ByteArray?,
     withBiometricAuth: Duration?,
 
-    ): KmmResult<TbaKey> = KmpCrypto.createSigningKey(ALIAS, alg, JVM_OPTS).map { it to listOf() }
+    ): KmmResult<TbaKey> = CryptoProvider.createSigningKey(ALIAS, alg, JVM_OPTS).map { it to listOf() }
 
 internal actual suspend fun sign(
     data: ByteArray,
     alg: CryptoAlgorithm,
     signingKey: CryptoPrivateKey
-): KmmResult<CryptoSignature> = KmpCrypto.sign(data, signingKey, alg)
+): KmmResult<CryptoSignature> = CryptoProvider.sign(data, signingKey, alg)
 
-internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS, JVM_OPTS)
-internal actual suspend fun loadPrivateKey() = KmpCrypto.getKeyPair(ALIAS, JVM_OPTS)
+internal actual suspend fun loadPubKey() = CryptoProvider.getPublicKey(ALIAS, JVM_OPTS)
+internal actual suspend fun loadPrivateKey() = CryptoProvider.getKeyPair(ALIAS, JVM_OPTS)
 
 internal actual suspend fun storeCertChain(): KmmResult<Unit> =
-    KmpCrypto.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN, JVM_OPTS)
+    CryptoProvider.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN, JVM_OPTS)
 
 internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
-    KmpCrypto.getCertificateChain(
+    CryptoProvider.getCertificateChain(
         ALIAS + "CRT_CHAIN", JVM_OPTS
     )

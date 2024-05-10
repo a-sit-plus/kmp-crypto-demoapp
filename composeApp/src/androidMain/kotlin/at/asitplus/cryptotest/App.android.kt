@@ -17,7 +17,7 @@ import at.asitplus.crypto.provider.AndroidPrivateKey
 import at.asitplus.crypto.provider.AndroidSpecificCryptoOps
 import at.asitplus.crypto.provider.BiometricPromptAdapter
 import at.asitplus.crypto.provider.CryptoPrivateKey
-import at.asitplus.crypto.provider.KmpCrypto
+import at.asitplus.crypto.provider.CryptoProvider
 import at.asitplus.crypto.provider.TbaKey
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -72,13 +72,13 @@ internal actual suspend fun generateKey(
                 )
             } ?: setUserAuthenticationRequired(false)
         })
-    return if (attestation == null) KmpCrypto.createSigningKey(
+    return if (attestation == null) CryptoProvider.createSigningKey(
         ALIAS,
         alg,
         opsForUse,
     ).map { it to listOf() }
     else {
-        KmpCrypto.createTbaP256Key(
+        CryptoProvider.createTbaP256Key(
             ALIAS,
             attestation,
             opsForUse
@@ -109,19 +109,19 @@ internal actual suspend fun sign(
     if (biometricPromot == null)
         biometricPromot = setupBiometric()
     (signingKey.platformSpecifics as AndroidSpecificCryptoOps).attachAuthenticationHandler { biometricPromot!! }
-    return KmpCrypto.sign(
+    return CryptoProvider.sign(
         data,
         signingKey,
         alg
     )
 }
 
-internal actual suspend fun loadPubKey() = KmpCrypto.getPublicKey(ALIAS)
+internal actual suspend fun loadPubKey() = CryptoProvider.getPublicKey(ALIAS)
 internal actual suspend fun loadPrivateKey() =
-    KmpCrypto.getKeyPair(ALIAS, AndroidSpecificCryptoOps())
+    CryptoProvider.getKeyPair(ALIAS, AndroidSpecificCryptoOps())
 
 internal actual suspend fun storeCertChain(): KmmResult<Unit> =
-    KmpCrypto.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN)
+    CryptoProvider.storeCertificateChain(ALIAS + "CRT_CHAIN", SAMPLE_CERT_CHAIN)
 
 internal actual suspend fun getCertChain(): KmmResult<List<X509Certificate>> =
-    KmpCrypto.getCertificateChain(ALIAS + "CRT_CHAIN")
+    CryptoProvider.getCertificateChain(ALIAS + "CRT_CHAIN")

@@ -1,0 +1,3 @@
+[submodule "kmp-crypto"]
+	path = kmp-crypto
+	url = ../kmp-crypto

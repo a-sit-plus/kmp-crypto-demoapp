@@ -386,7 +386,7 @@ internal fun App() {
                         CoroutineScope(context).launch {
                             sign(
                                 inputData.encodeToByteArray(),
-                                when ((currentKey!!.getOrThrow().first.public as CryptoPublicKey.Ec).curve.keyLengthBits) {
+                                when ((currentKey!!.getOrThrow().first.public as CryptoPublicKey.EC).curve.keyLengthBits) {
                                     256u -> CryptoAlgorithm.ES256
 
                                     384u -> CryptoAlgorithm.ES384

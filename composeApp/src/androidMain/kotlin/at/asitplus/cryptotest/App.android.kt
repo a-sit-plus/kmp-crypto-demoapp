@@ -13,17 +13,12 @@ import at.asitplus.KmmResult
 import at.asitplus.crypto.datatypes.CryptoAlgorithm
 import at.asitplus.crypto.datatypes.CryptoSignature
 import at.asitplus.crypto.datatypes.pki.X509Certificate
-import at.asitplus.crypto.provider.AndroidPrivateKey
 import at.asitplus.crypto.provider.AndroidSpecificCryptoOps
 import at.asitplus.crypto.provider.BiometricPromptAdapter
 import at.asitplus.crypto.provider.CryptoPrivateKey
 import at.asitplus.crypto.provider.CryptoProvider
 import at.asitplus.crypto.provider.TbaKey
-import io.github.aakira.napier.Napier
 import kotlinx.coroutines.asCoroutineDispatcher
-import java.security.KeyStore
-import java.security.KeyStore.PrivateKeyEntry
-import java.security.cert.CertificateFactory
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.time.Duration
@@ -44,7 +39,7 @@ private var fragmentActivity: FragmentActivity? = null
 var executor: Executor? = null
 val ctx = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
-private var biometricPromot: AndroidSpecificCryptoOps.BiometricAuth? = null
+private var biometricPrompt: AndroidSpecificCryptoOps.BiometricAuth? = null
 
 class AppActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,9 +101,9 @@ internal actual suspend fun sign(
     alg: CryptoAlgorithm,
     signingKey: CryptoPrivateKey
 ): KmmResult<CryptoSignature> {
-    if (biometricPromot == null)
-        biometricPromot = setupBiometric()
-    (signingKey.platformSpecifics as AndroidSpecificCryptoOps).attachAuthenticationHandler { biometricPromot!! }
+    if (biometricPrompt == null)
+        biometricPrompt = setupBiometric()
+    (signingKey.platformSpecifics as AndroidSpecificCryptoOps).attachAuthenticationHandler { biometricPrompt!! }
     return CryptoProvider.sign(
         data,
         signingKey,

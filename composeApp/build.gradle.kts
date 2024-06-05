@@ -34,7 +34,7 @@ kotlin {
             }
         }
         commonMain.dependencies {
-            implementation("at.asitplus.crypto:provider:0.0.2-SNAPSHOT") {
+            implementation("at.asitplus.crypto:provider:0.0.3-SNAPSHOT") {
                 isChanging = true
             }
             implementation(compose.runtime)
@@ -102,4 +102,3 @@ buildConfig {
     // BuildConfig configuration here.
     // https://github.com/gmazzo/gradle-buildconfig-plugin#usage-in-kts
 }
-

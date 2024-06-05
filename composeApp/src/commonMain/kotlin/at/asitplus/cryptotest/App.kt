@@ -126,7 +126,7 @@ internal fun App() {
         var attestation by remember { mutableStateOf(false) }
         var biometricAuth by remember { mutableStateOf(" Disabled") }
         var selectedIndex by remember { mutableStateOf(0) }
-        val algos = listOf(CryptoAlgorithm.ES256, CryptoAlgorithm.ES384, CryptoAlgorithm.ES512)
+        val algos = listOf(CryptoAlgorithm.ES256, CryptoAlgorithm.ES384, CryptoAlgorithm.ES512, CryptoAlgorithm.RS256)
         var inputData by remember { mutableStateOf("Foo") }
         var currentKey by remember { mutableStateOf<KmmResult<TbaKey>?>(null) }
         var currentKeyStr by remember { mutableStateOf("<none>") }

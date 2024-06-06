@@ -386,15 +386,16 @@ internal fun App() {
                         CoroutineScope(context).launch {
                             sign(
                                 inputData.encodeToByteArray(),
+                                if(currentKey!!.getOrThrow()!!.first.public is CryptoPublicKey.EC)
                                 when ((currentKey!!.getOrThrow().first.public as CryptoPublicKey.EC).curve.keyLengthBits) {
                                     256u -> CryptoAlgorithm.ES256
 
                                     384u -> CryptoAlgorithm.ES384
 
                                     else -> CryptoAlgorithm.ES512
-                                },
+                                } else CryptoAlgorithm.RS256,
                                 currentKey!!.getOrThrow().first.first
-                            ).map { signatureData = it.encodeToTlv().prettyPrint() }
+                            ).mapCatching { signatureData = it.encodeToTlv().toDerHexString().also { Napier.w { "SIG: $it" } } }
                         }
 
                     },

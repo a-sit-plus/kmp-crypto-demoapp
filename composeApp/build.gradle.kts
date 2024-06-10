@@ -34,7 +34,7 @@ kotlin {
             }
         }
         commonMain.dependencies {
-            implementation("at.asitplus.crypto:provider:0.0.3-SNAPSHOT") {
+            implementation("at.asitplus.crypto:provider:0.0.4-SNAPSHOT") {
                 isChanging = true
             }
             implementation(compose.runtime)
